@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DevOps Assessment - Frontend</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 60px auto; }
+    #status { padding: 12px; border-radius: 6px; background: #f0f0f0; margin-top: 16px; }
+    .ok { color: green; }
+    .fail { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Frontend Application</h1>
+  <p>This page calls the backend API to verify connectivity.</p>
+  <div id="status">Checking backend...</div>
+
+  <script>
+    fetch('/api/backend-status')
+      .then(r => r.json())
+      .then(data => {
+        const el = document.getElementById('status');
+        if (data.backend && data.backend.status === 'ok') {
+          el.innerHTML = '<span class="ok">Backend reachable</span> at ' + data.backendUrl;
+        } else {
+          el.innerHTML = '<span class="fail">Backend not reachable</span>';
+        }
+      })
+      .catch(() => {
+        document.getElementById('status').innerHTML = '<span class="fail">Error contacting backend</span>';
+      });
+  </script>
+</body>
+</html>

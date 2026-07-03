@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: app
+data:
+  DB_HOST: "test-assessment-dev-db.cyhx1u9rm4qo.us-east-1.rds.amazonaws.com"   # private RDS endpoint
+  DB_NAME: "appdb"
+  DB_USER: "appuser"
+  PORT: "8080"
