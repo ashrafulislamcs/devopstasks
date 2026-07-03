@@ -10,7 +10,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}      
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
   BACKEND_IMAGE: test-assessment-backend
   FRONTEND_IMAGE: test-assessment-frontend
 
@@ -47,7 +47,7 @@ jobs:
       - name: Run tests
         working-directory: frontend
         run: npm test
-
+        
   # 2. Build + tag + push images (only on main branch / tags, not PRs)
   build-and-push:
     needs: [test-backend, test-frontend]
@@ -103,10 +103,8 @@ jobs:
       - name: Mock push notice (no registry configured)
         if: ${{ env.ECR_REGISTRY == '' }}
         run: echo "ECR_REGISTRY secret not set - images built and tagged locally only (mock push)."
-
-  # ---------------------------------------------------------------------
+        
   # 3. Create a GitHub release / tag
-  
   release:
     needs: build-and-push
     if: github.ref == 'refs/heads/main'
@@ -125,23 +123,28 @@ jobs:
         with:
           tag_name: "v$(date +'%Y.%m.%d')-${{ needs.build-and-push.outputs.image_tag }}"
           generate_release_notes: true
-
+          
   # 4. Deploy to Kubernetes (or mock deploy if no cluster access configured)
   deploy:
     needs: [build-and-push, release]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    env:
+      # secrets can't be referenced directly inside `if:` conditions in GitHub
+      # Actions, so we copy it into a plain env var first and check that instead.
+      HAS_KUBECONFIG: ${{ secrets.KUBE_CONFIG_DATA != '' }}
+      KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Configure kubeconfig
-        if: ${{ secrets.KUBE_CONFIG_DATA != '' }}
+        if: ${{ env.HAS_KUBECONFIG == 'true' }}
         run: |
           mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config
+          echo "$KUBE_CONFIG_DATA" | base64 -d > $HOME/.kube/config
 
       - name: Deploy to cluster
-        if: ${{ secrets.KUBE_CONFIG_DATA != '' }}
+        if: ${{ env.HAS_KUBECONFIG == 'true' }}
         run: |
           IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}
           kubectl set image deployment/backend backend=$ECR_REGISTRY/$BACKEND_IMAGE:$IMAGE_TAG -n app
@@ -150,7 +153,7 @@ jobs:
           kubectl rollout status deployment/frontend -n app
 
       - name: Mock deploy notice (no cluster access configured)
-        if: ${{ secrets.KUBE_CONFIG_DATA == '' }}
+        if: ${{ env.HAS_KUBECONFIG != 'true' }}
         run: |
           echo "KUBE_CONFIG_DATA secret not set - this is a mock deploy step."
           echo "Would run: kubectl apply -f k8s/ and kubectl set image ..."
