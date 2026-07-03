@@ -113,15 +113,19 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Create release tag
+      - name: Compute release tag
+        id: tag
         run: |
           TAG="v$(date +'%Y.%m.%d')-${{ needs.build-and-push.outputs.image_tag }}"
-          git tag $TAG
-          git push origin $TAG
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+      - name: Create release tag
+        run: |
+          git tag ${{ steps.tag.outputs.tag }}
+          git push origin ${{ steps.tag.outputs.tag }}
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v$(date +'%Y.%m.%d')-${{ needs.build-and-push.outputs.image_tag }}"
+          tag_name: ${{ steps.tag.outputs.tag }}
           generate_release_notes: true
           
   # 4. Deploy to Kubernetes (or mock deploy if no cluster access configured)
