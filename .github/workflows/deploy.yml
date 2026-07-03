@@ -141,6 +141,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure AWS credentials
+        if: ${{ env.HAS_KUBECONFIG == 'true' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Configure kubeconfig
         if: ${{ env.HAS_KUBECONFIG == 'true' }}
         run: |
@@ -161,7 +169,6 @@ jobs:
         run: |
           echo "KUBE_CONFIG_DATA secret not set - this is a mock deploy step."
           echo "Would run: kubectl apply -f k8s/ and kubectl set image ..."
-
 # How secrets are stored safely (not committed to the repo):
 #
 #   - GitHub Secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, ECR_REGISTRY,
